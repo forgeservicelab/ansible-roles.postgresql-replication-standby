@@ -1,0 +1,53 @@
+---
+# tasks file for postgresql-replication-standby
+- meta: flush handlers
+
+- name: ensure rsync presence
+  apt:
+    pkg: rsync
+    state: latest
+
+- name: stop postgresql service
+  service:
+    name: postgresql
+    state: stopped
+
+- name: Upload postgresql data
+  synchronize:
+    dest: "{{ postgresql_data_dir }}"
+    src: "{{ control_dump_location }}"
+    mode: push
+    owner: no
+    group: no
+    times: no
+    recursive: yes
+    rsync_opts: --exclude=pg_xlog
+  sudo_user: postgres
+
+- name: upload replication configuration
+  template:
+    src: recovery.conf
+    dest: "{{ postgresql_data_dir}}/recovery.conf"
+    owner: postgres
+    group: postgres
+
+- name: ensure empty pg_xlog directory
+  file:
+    path: "{{ postgresql_data_dir }}/pg_xlog"
+    state: "{{ item }}"
+  sudo_user: postgres
+  with_items:
+    - absent
+    - directory
+
+- name: ensure data directory ownership
+  file:
+    path: "{{ postgresql_data_dir }}"
+    owner: postgres
+    group: postgres
+    recurse: yes
+
+- name: start postgresql service
+  service:
+    name: postgresql
+    state: started
