@@ -25,6 +25,7 @@
 
 - name: Create base backup
   command: "pg_basebackup -h {{ postgresql_master_host }} -D {{ postgresql_data_dir }} -P -U replication --xlog-method=stream -R"
+  sudo_user: postgres
   
 - name: start postgresql service
   service:
